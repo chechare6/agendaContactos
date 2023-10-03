@@ -1,3 +1,4 @@
+import java.lang.reflect.Constructor;
 import java.util.UUID;
 
 import lombok.AllArgsConstructor;
@@ -10,12 +11,20 @@ public class Contacto {
 
 	private String nombre, telefono;
 	private int edad;
-	private UUID usuario;
+	private UUID idContacto;
 
-	public Contacto(UUID usuario, String nombre, String telefono, int edad) {
+	public Contacto(String nombre, String telefono, int edad) {
+		this.idContacto = UUID.randomUUID();
 		this.nombre = nombre;
 		this.telefono = telefono;
 		this.edad = edad;
 	}
 
+	public Contacto(UUID idContacto, String nombre, String telefono, int edad) {
+		this.idContacto = idContacto;
+		this.nombre = nombre;
+		this.telefono = telefono;
+		this.edad = edad;
+	}
+	
 }
