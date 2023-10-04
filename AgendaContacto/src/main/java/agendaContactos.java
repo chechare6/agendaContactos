@@ -92,6 +92,8 @@ public class agendaContactos {
 			while ((datos = br.readLine()) != null) {
 				String[] contactos = datos.split(";");
 				for (int i = 0; i < contactos.length; i++) {
+					if (contactos[i].contains("00000000-0000-0000-0000-000000000000"))
+						continue;
 					if (contactos[i].equals(id)) {
 						return contactos[i] + " | " + contactos[i + 1] + " | " + contactos[i + 2] + " | "
 								+ contactos[i + 3];
@@ -107,21 +109,27 @@ public class agendaContactos {
 	public static String buscarNombre(String ruta, String nombre) {
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(ruta));
-			String datos;
+			String datos, persona = null;
 			br.readLine(); // Lee la cabecera para no volver a leerla después
 			while ((datos = br.readLine()) != null) {
 				String[] contactos = datos.split(";");
 				for (int i = 1; i < contactos.length; i++) {
-					if (contactos[i].contains(nombre)) {
-						return contactos[i - 1] + " | " + contactos[i] + " | " + contactos[i + 1] + " | "
+					if (contactos[i - 1].contains("00000000-0000-0000-0000-000000000000"))
+						continue;
+					if (contactos[i].toLowerCase().contains(nombre.toLowerCase())) {
+						persona = contactos[i - 1] + " | " + contactos[i] + " | " + contactos[i + 1] + " | "
 								+ contactos[i + 2];
+						System.out.println(persona);
 					}
 				}
+			}
+			if (persona != null) {
+				return "No hay más contactos con nombre: " + nombre;
 			}
 		} catch (Exception e) {
 			e.getMessage();
 		}
-		return "No se ha encontrado al usuario con nombre (o que contenga): " + nombre;
+		return "No se ha encontrado al contacto con nombre (o que contenga): " + nombre;
 	}
 
 	public static void addContacto(String nombre, String telefono, int edad) {
@@ -148,26 +156,73 @@ public class agendaContactos {
 		}
 	}
 
-	//CORREGIR ESTE METODO
+	// METODO LO PONE COMO 0000000000000000000000000 PERO NO PONE BORRADO
 	public static String borrarContacto(String ruta, String id) {
-		String idBorrada = "borrado -> 00000000-0000-0000-0000-000000000000";
+		String idBorrada = "00000000-0000-0000-0000-000000000000";
 		try {
 			RandomAccessFile raf = new RandomAccessFile(ruta, "rw");
 			String datos = raf.readLine();
+			long pos = 0;
 			while ((datos = raf.readLine()) != null) {
-                String[] contactos = datos.split(";");
-                String idABorrar = contactos[0].trim();
-                if (idABorrar.equals(id)) {
-                    String nuevaLinea = idBorrada + ";" + contactos[1] + ";" + contactos[2] + ";" + contactos[3];
-                    raf.writeBytes(nuevaLinea);
-                    return "Contacto con UUID: " + id + " borrado.";
-                }
-            }
+				String[] contactos = datos.split(";");
+				String idABorrar = contactos[0].trim();
+				if (idABorrar.equals(id)) {
+					raf.seek(pos);
+					String nuevaLinea = idBorrada + ";" + contactos[1] + ";" + contactos[2] + ";"
+							+ contactos[3];
+					raf.writeBytes(nuevaLinea);
+					return "Contacto con UUID: " + id + " borrado.";
+				}
+				pos = raf.getFilePointer();
+			}
 			return "UUID no encontrada";
 		} catch (Exception e) {
 			e.getMessage();
 		}
 		return "No se ha encontrado un contacto con UUID: " + id;
+	}
+
+	//METODO CREA ARCHIVO TEMPORAL PERO NO LO SUSTITUYE EN LA AGENDA (NO ES FUNCIONAL)
+	public static String borrarContacto2(String ruta, String id) {
+		String idBorrada = "00000000-0000-0000-0000-000000000000";
+		boolean idExiste = false;
+		try {
+			RandomAccessFile rafOriginal = new RandomAccessFile(ruta, "rw");
+			RandomAccessFile rafTemp = new RandomAccessFile("./FicheroAgenda/Temporal.csv", "rw");
+			String datos = rafOriginal.readLine();
+			rafTemp.writeBytes(datos + "\n"); // Escribe Cabecera
+			while ((datos = rafOriginal.readLine()) != null) {
+				String[] contactos = datos.split(";");
+				String idABorrar = contactos[0].trim();
+				if (idABorrar.equals(id)) {
+					String nuevaLinea = "borrado -> " + idBorrada + ";" + contactos[1] + ";" + contactos[2] + ";"
+							+ contactos[3] + "\n";
+					rafTemp.writeBytes(nuevaLinea);
+					idExiste = true;
+				} else {
+					rafTemp.writeBytes(
+							contactos[0] + ";" + contactos[1] + ";" + contactos[2] + ";" + contactos[3] + "\n");
+				}
+			}
+			if (idExiste) {
+				try {
+					File archivoBorrar = new File(ruta);
+					if(archivoBorrar.exists() && archivoBorrar.delete()) {
+						File archivoRenombrar = new File("./FicheroAgenda/Temporal.csv");
+						if(archivoRenombrar.exists()) {
+							File nuevoFichero = new File(ruta);
+							archivoRenombrar.renameTo(nuevoFichero);
+							return "Archivo Temporal creado";
+						}
+					}
+				} catch (Exception e) {
+					e.getMessage();
+				}
+			}
+		} catch (Exception e) {
+			e.getMessage();
+		}
+		return "No se ha podido borrar/crear temporal";
 	}
 
 	public static void mostrarAgenda(String ruta) {
